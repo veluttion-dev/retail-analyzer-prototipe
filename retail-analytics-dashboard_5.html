@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barrabes Analytics - Dashboard</title>
+    <!-- Using development builds so the in-browser Babel transformer works during local debugging -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f1f5f9;
+            color: #1f2937;
+            line-height: 1.5;
+        }
+        .dashboard-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            box-shadow: 4px 0 6px rgba(0, 0, 0, 0.1);
+        }
+        .sidebar-header {
+            padding: 2rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .sidebar-logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .sidebar-subtitle {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+        .sidebar-nav {
+            padding: 1rem 0;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 0.875rem 1.5rem;
+            color: #cbd5e1;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            gap: 1rem;
+            font-size: 0.9rem;
+        }
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+        .nav-item.active {
+            background: rgba(59, 130, 246, 0.2);
+            border-left-color: #3b82f6;
+            color: white;
+            font-weight: 600;
+        }
+        .nav-icon {
+            font-size: 1.25rem;
+            width: 24px;
+            text-align: center;
+        }
+        
+        /* Main Content */
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            background: #f1f5f9;
+        }
+        
+        /* Header */
+        header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .header-content {
+            padding: 1.25rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #111827;
+        }
+        .subtitle {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+        .header-info {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+        .header-stat {
+            text-align: right;
+        }
+        .header-stat .label {
+            font-size: 0.75rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .header-stat .value {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        /* Content */
+        .content-wrapper {
+            padding: 2rem;
+            max-width: 1600px;
+        }
+
+        /* Filters Bar */
+        .filters-bar {
+            background: white;
+            padding: 1.25rem;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .filter-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid #e5e7eb;
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        .metric-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid #e5e7eb;
+        }
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+            border-color: #3b82f6;
+        }
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .grid-3 {
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+        .grid-2 {
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+        }
+        .grid-4 {
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        }
+
+        /* Metric Card */
+        .metric-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        .metric-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .metric-icon {
+            font-size: 2.5rem;
+            opacity: 0.8;
+        }
+        .metric-value {
+            font-size: 2.25rem;
+            font-weight: 800;
+            color: #111827;
+            margin-bottom: 0.5rem;
+        }
+        .metric-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #f1f5f9;
+        }
+        .metric-subtitle {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        .metric-trend {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #10b981;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .metric-trend.negative {
+            color: #ef4444;
+        }
+
+        /* Product Card */
+        .product-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+            transition: all 0.3s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+        }
+        .product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+            border-color: #3b82f6;
+        }
+        .product-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: white;
+        }
+        .product-body {
+            padding: 1.25rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .product-category {
+            font-size: 0.75rem;
+            color: #6b7280;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+        .product-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 0.75rem;
+            line-height: 1.4;
+        }
+        .product-sku {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            font-family: monospace;
+            margin-bottom: 1rem;
+        }
+        .product-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-top: auto;
+        }
+        .product-stat {
+            text-align: center;
+            padding: 0.5rem;
+            background: #f9fafb;
+            border-radius: 6px;
+        }
+        .product-stat-label {
+            font-size: 0.7rem;
+            color: #6b7280;
+            display: block;
+        }
+        .product-stat-value {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #111827;
+            display: block;
+            margin-top: 0.25rem;
+        }
+        .product-footer {
+            padding: 1rem 1.25rem;
+            background: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .product-price {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #111827;
+        }
+        .product-stock {
+            font-size: 0.875rem;
+            font-weight: 600;
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+        }
+        .stock-high {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .stock-medium {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .stock-low {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 1.25rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        .alert-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+        .alert-critical {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border-left: 4px solid #dc2626;
+        }
+        .alert-warning {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-left: 4px solid #f59e0b;
+        }
+        .alert-success {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border-left: 4px solid #10b981;
+        }
+        .alert-content {
+            flex: 1;
+        }
+        .alert-critical .alert-title { color: #7f1d1d; font-weight: 700; font-size: 1rem; }
+        .alert-critical .alert-text { color: #991b1b; font-size: 0.875rem; margin-top: 0.25rem; }
+        .alert-warning .alert-title { color: #78350f; font-weight: 700; font-size: 1rem; }
+        .alert-warning .alert-text { color: #92400e; font-size: 0.875rem; margin-top: 0.25rem; }
+        .alert-success .alert-title { color: #14532d; font-weight: 700; font-size: 1rem; }
+        .alert-success .alert-text { color: #166534; font-size: 0.875rem; margin-top: 0.25rem; }
+        .alert-actions {
+            flex-shrink: 0;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 0.625rem 1.25rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #b91c1c;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+        }
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+        .btn-warning:hover {
+            background: #d97706;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+        }
+        .btn-ghost {
+            background: transparent;
+            color: #6b7280;
+            border: 1px solid #e5e7eb;
+        }
+        .btn-ghost:hover {
+            background: #f9fafb;
+            border-color: #d1d5db;
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        thead {
+            background: #f9fafb;
+        }
+        th {
+            padding: 1rem 1.5rem;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        td {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.875rem;
+            vertical-align: middle;
+        }
+        tbody tr {
+            transition: background 0.2s;
+        }
+        tbody tr:hover {
+            background: #f9fafb;
+        }
+        .table-link {
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+        .table-link:hover {
+            color: #2563eb;
+            text-decoration: underline;
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 0.375rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border-radius: 6px;
+            letter-spacing: 0.3px;
+        }
+        .badge-blue {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .badge-gray {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        .badge-red {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .badge-yellow {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .badge-green {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        /* Select */
+        select {
+            padding: 0.625rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            background: white;
+            cursor: pointer;
+            color: #374151;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        select:hover {
+            border-color: #9ca3af;
+        }
+        select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        /* Heading */
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #111827;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        h2 .emoji {
+            font-size: 1.75rem;
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Colors */
+        .text-red-600 { color: #dc2626; }
+        .text-yellow-600 { color: #d97706; }
+        .text-green-600 { color: #16a34a; }
+        .text-gray-500 { color: #6b7280; }
+        .text-gray-900 { color: #111827; }
+        .font-semibold { font-weight: 600; }
+        .font-bold { font-weight: 700; }
+
+        /* Progress bar */
+        .progress-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .progress-bar {
+            flex: 1;
+            max-width: 120px;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+            border-radius: 999px;
+            transition: width 0.3s;
+        }
+
+        /* Category badge with dot */
+        .category-badge {
+            display: flex;
+            align-items: center;
+        }
+        .color-dot {
+            width: 0.75rem;
+            height: 0.75rem;
+            border-radius: 50%;
+            margin-right: 0.75rem;
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+        }
+
+        /* Info box */
+        .info-box {
+            padding: 1.25rem;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-radius: 10px;
+            margin-top: 1.5rem;
+            border-left: 4px solid #f59e0b;
+        }
+        .info-box .title {
+            font-size: 0.875rem;
+            color: #78350f;
+            font-weight: 700;
+        }
+        .info-box .text {
+            font-size: 0.8rem;
+            color: #92400e;
+            margin-top: 0.5rem;
+        }
+
+        .overflow-x-auto {
+            overflow-x: auto;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #9ca3af;
+        }
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        .empty-state-text {
+            font-size: 1rem;
+            color: #6b7280;
+        }
+    </style>
+    <!-- React mount point for the app -->
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Imágenes placeholder por categoría
+        const categoryIcons = {
+            "Esquí": "⛷️",
+            "Trekking": "🥾",
+            "Escalada": "🧗",
+            "Trail Running": "🏃",
+            "Camping": "⛺",
+            "Alpinismo": "🏔️"
+        };
+
+        // Colores de gradiente por categoría
+        const categoryGradients = {
+            "Esquí": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            "Trekking": "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+            "Escalada": "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+            "Trail Running": "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
+            "Camping": "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+            "Alpinismo": "linear-gradient(135deg, #30cfd0 0%, #330867 100%)"
+        };
+
+        // Datos simulados - en producción vendrían de tu API/BD
+        const mockData = {
+            // KPIs generales
+            kpis: {
+                revenueToday: 45230,
+                revenueMonth: 892450,
+                ordersToday: 127,
+                ordersMonth: 3421,
+                avgTicket: 261,
+                stockValue: 2340000
+            },
+
+            // Top 20 productos más vendidos (último mes)
+            topProducts: [
+                { id: 1, sku: "ESQ-001", name: "Botas Scarpa Maestrale RS", category: "Esquí", units: 89, revenue: 53400, margin: 35, stock: 12 },
+                { id: 2, sku: "TRK-045", name: "Mochila Osprey Atmos 65", category: "Trekking", units: 156, revenue: 31200, margin: 42, stock: 45 },
+                { id: 3, sku: "ESC-023", name: "Arnés Petzl Aquila", category: "Escalada", units: 203, revenue: 20300, margin: 38, stock: 89 },
+                { id: 4, sku: "TRL-067", name: "Zapatillas Salomon Speedcross 5", category: "Trail Running", units: 234, revenue: 28080, margin: 40, stock: 156 },
+                { id: 5, sku: "ESQ-089", name: "Esquís Atomic Maverick 95", category: "Esquí", units: 45, revenue: 27000, margin: 32, stock: 8 },
+                { id: 6, sku: "TRK-112", name: "Bastones Black Diamond Trail Pro", category: "Trekking", units: 312, revenue: 18720, margin: 45, stock: 234 },
+                { id: 7, sku: "ESC-156", name: "Cuerda Mammut Infinity 9.5mm", category: "Escalada", units: 67, revenue: 13400, margin: 36, stock: 23 },
+                { id: 8, sku: "CAM-034", name: "Saco Montbell Down Hugger 800", category: "Camping", units: 78, revenue: 23400, margin: 38, stock: 34 },
+                { id: 9, sku: "ESQ-234", name: "Fijaciones Marker Kingpin 13", category: "Esquí", units: 56, revenue: 28000, margin: 30, stock: 15 },
+                { id: 10, sku: "TRL-123", name: "Mochila Ultimate Direction Fastpack 25", category: "Trail Running", units: 189, revenue: 18900, margin: 43, stock: 67 },
+                { id: 11, sku: "ESC-089", name: "Pies de gato La Sportiva Solution", category: "Escalada", units: 145, revenue: 21750, margin: 41, stock: 78 },
+                { id: 12, sku: "TRK-234", name: "Tienda MSR Hubba Hubba NX 2", category: "Trekking", units: 43, revenue: 17200, margin: 35, stock: 19 },
+                { id: 13, sku: "TRL-234", name: "Reloj Garmin Fenix 7 Solar", category: "Trail Running", units: 67, revenue: 40200, margin: 28, stock: 23 },
+                { id: 14, sku: "ESQ-345", name: "Casco Smith Vantage MIPS", category: "Esquí", units: 98, revenue: 24500, margin: 37, stock: 45 },
+                { id: 15, sku: "CAM-123", name: "Hornillo Jetboil Flash", category: "Camping", units: 167, revenue: 16700, margin: 44, stock: 89 },
+                { id: 16, sku: "ESC-234", name: "Magnesio Black Diamond", category: "Escalada", units: 456, revenue: 4560, margin: 52, stock: 234 },
+                { id: 17, sku: "TRK-345", name: "Chaqueta Arc'teryx Beta AR", category: "Trekking", units: 34, revenue: 20400, margin: 33, stock: 12 },
+                { id: 18, sku: "TRL-345", name: "Gorra Buff Pack Run Cap", category: "Trail Running", units: 289, revenue: 8670, margin: 48, stock: 156 },
+                { id: 19, sku: "ESQ-456", name: "Gafas Oakley Flight Deck", category: "Esquí", units: 112, revenue: 22400, margin: 39, stock: 67 },
+                { id: 20, sku: "TRK-456", name: "GPS Garmin inReach Mini 2", category: "Trekking", units: 56, revenue: 19600, margin: 31, stock: 28 }
+            ],
+
+            // Productos con stock bajo (< 7 días de inventario)
+            lowStock: [
+                { sku: "ESQ-001", name: "Botas Scarpa Maestrale RS", stock: 12, dailySales: 2.9, daysLeft: 4.1, value: 7200, priority: "critical" },
+                { sku: "ESQ-089", name: "Esquís Atomic Maverick 95", stock: 8, dailySales: 1.5, daysLeft: 5.3, value: 4800, priority: "critical" },
+                { sku: "TRK-234", name: "Tienda MSR Hubba Hubba NX 2", stock: 19, dailySales: 3.2, daysLeft: 5.9, value: 7600, priority: "critical" },
+                { sku: "TRK-345", name: "Chaqueta Arc'teryx Beta AR", stock: 12, dailySales: 2.1, daysLeft: 5.7, value: 7200, priority: "critical" },
+                { sku: "ESQ-234", name: "Fijaciones Marker Kingpin 13", stock: 15, dailySales: 2.3, daysLeft: 6.5, value: 7500, priority: "warning" },
+                { sku: "ESC-023", name: "Cuerda Mammut Infinity 9.5mm", stock: 23, dailySales: 3.5, daysLeft: 6.6, value: 4600, priority: "warning" },
+                { sku: "TRL-123", name: "Reloj Garmin Fenix 7 Solar", stock: 23, dailySales: 3.4, daysLeft: 6.8, value: 13800, priority: "warning" },
+                { sku: "TRK-456", name: "GPS Garmin inReach Mini 2", stock: 28, dailySales: 4.1, daysLeft: 6.8, value: 9800, priority: "warning" }
+            ],
+
+            // Productos sin vender en 90+ días (dead stock)
+            deadStock: [
+                { sku: "ESQ-567", name: "Botas Tecnica Mach1 120 (Modelo 2020)", stock: 34, lastSale: 156, value: 17000, cost: 12240, category: "Esquí" },
+                { sku: "TRK-678", name: "Mochila Deuter Futura 28 (Color descatalogado)", stock: 23, lastSale: 134, value: 2760, cost: 1932, category: "Trekking" },
+                { sku: "ESC-789", name: "Mosquetones DMM Shadow (Pack antiguo)", stock: 67, lastSale: 98, value: 2010, cost: 1407, category: "Escalada" },
+                { sku: "CAM-890", name: "Esterilla Therm-a-Rest NeoAir (versión anterior)", stock: 45, lastSale: 187, value: 6750, cost: 4725, category: "Camping" },
+                { sku: "TRL-901", name: "Mallas Salomon Agile Long Tight (Talla XS)", stock: 89, lastSale: 245, value: 5340, cost: 3738, category: "Trail Running" },
+                { sku: "ESQ-012", name: "Gafas Julbo Aerospace (modelo antiguo)", stock: 56, lastSale: 167, value: 8960, cost: 6272, category: "Esquí" },
+                { sku: "TRK-123", name: "Linterna Petzl Tikka (versión 2019)", stock: 123, lastSale: 203, value: 4920, cost: 3444, category: "Trekking" },
+                { sku: "ESC-234", name: "Grigri Petzl (color edición limitada)", stock: 12, lastSale: 112, value: 1200, cost: 840, category: "Escalada" }
+            ],
+
+            // Revenue por categoría
+            revenueByCategory: [
+                { category: "Esquí", revenue: 245600, percentage: 27.5, orders: 892, avgTicket: 275 },
+                { category: "Trekking", revenue: 198400, percentage: 22.2, orders: 1234, avgTicket: 161 },
+                { category: "Escalada", revenue: 167300, percentage: 18.7, orders: 1567, avgTicket: 107 },
+                { category: "Trail Running", revenue: 156700, percentage: 17.6, orders: 1876, avgTicket: 84 },
+                { category: "Camping", revenue: 89200, percentage: 10.0, orders: 567, avgTicket: 157 },
+                { category: "Alpinismo", revenue: 35250, percentage: 4.0, orders: 185, avgTicket: 191 }
+            ],
+
+            // Tendencia últimos 30 días
+            salesTrend: [
+                { day: "1 Nov", sales: 28400, orders: 98 },
+                { day: "2 Nov", sales: 31200, orders: 112 },
+                { day: "3 Nov", sales: 26800, orders: 89 },
+                { day: "4 Nov", sales: 29500, orders: 105 },
+                { day: "5 Nov", sales: 33100, orders: 121 },
+                { day: "6 Nov", sales: 35600, orders: 134 },
+                { day: "7 Nov", sales: 38200, orders: 145 },
+                { day: "8 Nov", sales: 31900, orders: 109 },
+                { day: "9 Nov", sales: 29200, orders: 98 },
+                { day: "10 Nov", sales: 27800, orders: 92 },
+                { day: "11 Nov", sales: 32400, orders: 115 },
+                { day: "12 Nov", sales: 34700, orders: 128 },
+                { day: "13 Nov", sales: 36900, orders: 139 },
+                { day: "14 Nov", sales: 39400, orders: 151 },
+                { day: "15 Nov", sales: 41200, orders: 156 },
+                { day: "16 Nov", sales: 38600, orders: 142 },
+                { day: "17 Nov", sales: 35400, orders: 127 },
+                { day: "18 Nov", sales: 33800, orders: 119 },
+                { day: "19 Nov", sales: 45200, orders: 167 }
+            ]
+        };
+
+        // Componente de gráfico de líneas con Chart.js
+        const LineChart = ({ data, title }) => {
+            const canvasRef = useRef(null);
+            const chartRef = useRef(null);
+
+            useEffect(() => {
+                if (canvasRef.current) {
+                    const ctx = canvasRef.current.getContext('2d');
+                    
+                    // Destruir gráfico anterior si existe
+                    if (chartRef.current) {
+                        chartRef.current.destroy();
+                    }
+
+                    chartRef.current = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: data.map(d => d.day),
+                            datasets: [{
+                                label: 'Ventas (€)',
+                                data: data.map(d => d.sales),
+                                borderColor: '#0088FE',
+                                backgroundColor: 'rgba(0, 136, 254, 0.1)',
+                                tension: 0.4,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: false,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return '€' + value.toLocaleString();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                return () => {
+                    if (chartRef.current) {
+                        chartRef.current.destroy();
+                    }
+                };
+            }, [data]);
+
+            return <canvas ref={canvasRef} style={{maxHeight: '300px'}}></canvas>;
+        };
+
+        // Componente de gráfico de barras con Chart.js
+        const BarChart = ({ data, title }) => {
+            const canvasRef = useRef(null);
+            const chartRef = useRef(null);
+
+            useEffect(() => {
+                if (canvasRef.current) {
+                    const ctx = canvasRef.current.getContext('2d');
+                    
+                    if (chartRef.current) {
+                        chartRef.current.destroy();
+                    }
+
+                    chartRef.current = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: data.map(d => d.category),
+                            datasets: [{
+                                label: 'Revenue',
+                                data: data.map(d => d.revenue),
+                                backgroundColor: '#0088FE'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return '€' + value.toLocaleString();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                return () => {
+                    if (chartRef.current) {
+                        chartRef.current.destroy();
+                    }
+                };
+            }, [data]);
+
+            return <canvas ref={canvasRef} style={{maxHeight: '300px'}}></canvas>;
+        };
+
+        // Componente de gráfico circular (pie) con Chart.js
+        const PieChart = ({ data, title }) => {
+            const canvasRef = useRef(null);
+            const chartRef = useRef(null);
+            const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+
+            useEffect(() => {
+                if (canvasRef.current) {
+                    const ctx = canvasRef.current.getContext('2d');
+                    
+                    if (chartRef.current) {
+                        chartRef.current.destroy();
+                    }
+
+                    chartRef.current = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: data.map(d => d.category),
+                            datasets: [{
+                                data: data.map(d => d.revenue),
+                                backgroundColor: COLORS
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'right'
+                                }
+                            }
+                        }
+                    });
+                }
+
+                return () => {
+                    if (chartRef.current) {
+                        chartRef.current.destroy();
+                    }
+                };
+            }, [data]);
+
+            return <canvas ref={canvasRef} style={{maxHeight: '300px'}}></canvas>;
+        };
+
+        // Componente principal
+        const Dashboard = () => {
+            const [data, setData] = useState(mockData);
+            const [activeTab, setActiveTab] = useState('overview');
+            const [categoryFilter, setCategoryFilter] = useState('all');
+            const [sortBy, setSortBy] = useState('revenue');
+
+            const formatCurrency = (value) => {
+                return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(value);
+            };
+
+            const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+
+            // Filtrar productos por categoría
+            const filteredProducts = categoryFilter === 'all' 
+                ? data.topProducts 
+                : data.topProducts.filter(p => p.category === categoryFilter);
+
+            // Ordenar productos
+            const sortedProducts = [...filteredProducts].sort((a, b) => {
+                if (sortBy === 'revenue') return b.revenue - a.revenue;
+                if (sortBy === 'units') return b.units - a.units;
+                if (sortBy === 'margin') return b.margin - a.margin;
+                return 0;
+            });
+
+            return (
+                <div className="dashboard-layout">
+                    {/* Sidebar */}
+                    <aside className="sidebar">
+                        <div className="sidebar-header">
+                            <div className="sidebar-logo">
+                                <span>📊</span>
+                                Barrabes Analytics
+                            </div>
+                            <p className="sidebar-subtitle">Dashboard de análisis retail</p>
+                        </div>
+                        <nav className="sidebar-nav">
+                            <div 
+                                className={`nav-item ${activeTab === 'overview' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('overview')}
+                            >
+                                <span className="nav-icon">🏠</span>
+                                Resumen General
+                            </div>
+                            <div 
+                                className={`nav-item ${activeTab === 'products' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('products')}
+                            >
+                                <span className="nav-icon">📦</span>
+                                Catálogo Productos
+                            </div>
+                            <div 
+                                className={`nav-item ${activeTab === 'inventory' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('inventory')}
+                            >
+                                <span className="nav-icon">📋</span>
+                                Gestión Inventario
+                            </div>
+                            <div 
+                                className={`nav-item ${activeTab === 'categories' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('categories')}
+                            >
+                                <span className="nav-icon">📊</span>
+                                Análisis Categorías
+                            </div>
+                        </nav>
+                    </aside>
+
+                    {/* Main Content */}
+                    <div className="main-content">
+                        {/* Header */}
+                        <header>
+                            <div className="header-content">
+                                <div>
+                                    <h1>
+                                        {activeTab === 'overview' ? '🏠 Resumen General' : 
+                                         activeTab === 'products' ? '📦 Catálogo de Productos' :
+                                         activeTab === 'inventory' ? '📋 Gestión de Inventario' :
+                                         '📊 Análisis por Categorías'}
+                                    </h1>
+                                    <p className="subtitle">
+                                        {activeTab === 'overview' ? 'Vista global de métricas y alertas' : 
+                                         activeTab === 'products' ? 'Explora y filtra productos más vendidos' :
+                                         activeTab === 'inventory' ? 'Controla tu stock y previene roturas' :
+                                         'Analiza el rendimiento por categorías'}
+                                    </p>
+                                </div>
+                                <div className="header-info">
+                                    <div className="header-stat">
+                                        <p className="label">Última actualización</p>
+                                        <p className="value">19 Nov, 14:30</p>
+                                    </div>
+                                    <div className="header-stat">
+                                        <p className="label">Ventas Hoy</p>
+                                        <p className="value">{formatCurrency(data.kpis.revenueToday)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </header>
+
+                        {/* Content */}
+                        <div className="content-wrapper">
+                            {activeTab === 'overview' && <OverviewTab data={data} formatCurrency={formatCurrency} COLORS={COLORS} />}
+                            {activeTab === 'products' && (
+                                <ProductsTab 
+                                    data={data} 
+                                    formatCurrency={formatCurrency}
+                                    categoryFilter={categoryFilter}
+                                    setCategoryFilter={setCategoryFilter}
+                                    sortBy={sortBy}
+                                    setSortBy={setSortBy}
+                                    sortedProducts={sortedProducts}
+                                />
+                            )}
+                            {activeTab === 'inventory' && <InventoryTab data={data} formatCurrency={formatCurrency} />}
+                            {activeTab === 'categories' && <CategoriesTab data={data} formatCurrency={formatCurrency} COLORS={COLORS} />}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Tab: Resumen
+        const OverviewTab = ({ data, formatCurrency, COLORS }) => (
+            <>
+                {/* KPIs */}
+                <div className="grid grid-3">
+                    <MetricCard
+                        title="Ventas Hoy"
+                        value={formatCurrency(data.kpis.revenueToday)}
+                        subtitle={`${data.kpis.ordersToday} pedidos completados`}
+                        trend="+12.5%"
+                        icon="💰"
+                    />
+                    <MetricCard
+                        title="Ventas Este Mes"
+                        value={formatCurrency(data.kpis.revenueMonth)}
+                        subtitle={`${data.kpis.ordersMonth} pedidos totales`}
+                        trend="+8.3%"
+                        icon="📈"
+                    />
+                    <MetricCard
+                        title="Ticket Medio"
+                        value={formatCurrency(data.kpis.avgTicket)}
+                        subtitle="Valor promedio por pedido"
+                        trend="+3.7%"
+                        icon="🎯"
+                    />
+                </div>
+
+                {/* Alertas críticas */}
+                <div className="card">
+                    <div className="card-header">
+                        <h2><span className="emoji">⚠️</span>Alertas y Notificaciones</h2>
+                    </div>
+                    <div>
+                        <div className="alert alert-critical">
+                            <span className="alert-icon">🚨</span>
+                            <div className="alert-content">
+                                <p className="alert-title">4 productos con stock crítico (&lt;5 días)</p>
+                                <p className="alert-text">Riesgo de rotura de stock inminente en productos estrella</p>
+                            </div>
+                            <div className="alert-actions">
+                                <button className="btn btn-danger">Ver productos</button>
+                            </div>
+                        </div>
+                        <div className="alert alert-warning">
+                            <span className="alert-icon">📦</span>
+                            <div className="alert-content">
+                                <p className="alert-title">8 productos sin vender en +90 días</p>
+                                <p className="alert-text">Stock muerto valorado en {formatCurrency(49940)} - Considera liquidación</p>
+                            </div>
+                            <div className="alert-actions">
+                                <button className="btn btn-warning">Revisar stock</button>
+                            </div>
+                        </div>
+                        <div className="alert alert-success">
+                            <span className="alert-icon">🎉</span>
+                            <div className="alert-content">
+                                <p className="alert-title">Excelente rotación en Trail Running</p>
+                                <p className="alert-text">Categoría con mayor crecimiento: +23% vs mes anterior</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Gráficos lado a lado */}
+                <div className="grid grid-2">
+                    {/* Gráfico de tendencia */}
+                    <div className="card">
+                        <div className="card-header">
+                            <h2>📊 Tendencia de Ventas</h2>
+                            <span style={{fontSize: '0.875rem', color: '#6b7280'}}>Últimos 19 días</span>
+                        </div>
+                        <LineChart data={data.salesTrend} title="Ventas" />
+                    </div>
+
+                    {/* Revenue por categoría */}
+                    <div className="card">
+                        <div className="card-header">
+                            <h2>🎯 Distribución por Categoría</h2>
+                            <span style={{fontSize: '0.875rem', color: '#6b7280'}}>Ventas del mes</span>
+                        </div>
+                        <PieChart data={data.revenueByCategory} title="Revenue" />
+                    </div>
+                </div>
+
+                {/* Quick Stats */}
+                <div className="grid grid-3">
+                    {data.revenueByCategory.slice(0, 3).map((cat, index) => (
+                        <div key={index} className="card" style={{borderTop: `4px solid ${COLORS[index]}`}}>
+                            <div style={{fontSize: '2rem', marginBottom: '0.5rem'}}>{categoryIcons[cat.category]}</div>
+                            <h3 style={{fontSize: '1.125rem', fontWeight: '700', color: '#111827', marginBottom: '0.5rem'}}>
+                                {cat.category}
+                            </h3>
+                            <div style={{fontSize: '1.75rem', fontWeight: '800', color: '#111827', marginBottom: '0.75rem'}}>
+                                {formatCurrency(cat.revenue)}
+                            </div>
+                            <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: '#6b7280'}}>
+                                <span>{cat.orders} pedidos</span>
+                                <span style={{fontWeight: '600', color: COLORS[index]}}>{cat.percentage}%</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </>
+        );
+
+        // Tab: Productos (con cards visuales)
+        const ProductsTab = ({ data, formatCurrency, categoryFilter, setCategoryFilter, sortBy, setSortBy, sortedProducts }) => {
+            const handleProductClick = (product) => {
+                // Simular redirección al producto
+                const productUrl = `https://barrabes.com/products/${product.sku}`;
+                alert(`Redirigiendo a: ${productUrl}\n\nProducto: ${product.name}\nSKU: ${product.sku}`);
+                // En producción: window.location.href = productUrl;
+            };
+
+            return (
+                <>
+                    {/* Filters Bar */}
+                    <div className="filters-bar">
+                        <div className="filter-group">
+                            <label className="filter-label">Categoría</label>
+                            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+                                <option value="all">Todas las categorías</option>
+                                <option value="Esquí">⛷️ Esquí</option>
+                                <option value="Trekking">🥾 Trekking</option>
+                                <option value="Escalada">🧗 Escalada</option>
+                                <option value="Trail Running">🏃 Trail Running</option>
+                                <option value="Camping">⛺ Camping</option>
+                            </select>
+                        </div>
+                        <div className="filter-group">
+                            <label className="filter-label">Ordenar por</label>
+                            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                                <option value="revenue">💰 Ingresos</option>
+                                <option value="units">📦 Unidades vendidas</option>
+                                <option value="margin">📈 Margen (%)</option>
+                            </select>
+                        </div>
+                        <div className="filter-group">
+                            <label className="filter-label">Periodo</label>
+                            <select>
+                                <option>📅 Último mes</option>
+                                <option>📅 Última semana</option>
+                                <option>📅 Últimos 3 meses</option>
+                                <option>📅 Este año</option>
+                            </select>
+                        </div>
+                        <div style={{marginLeft: 'auto', display: 'flex', alignItems: 'flex-end'}}>
+                            <button className="btn btn-primary">
+                                📥 Exportar datos
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Products Grid */}
+                    <div className="card">
+                        <div className="card-header">
+                            <h2>
+                                <span className="emoji">🏆</span>
+                                Top Productos
+                                <span style={{fontSize: '1rem', fontWeight: 'normal', color: '#6b7280', marginLeft: '0.5rem'}}>
+                                    ({sortedProducts.length} productos)
+                                </span>
+                            </h2>
+                        </div>
+                        
+                        <div className="grid grid-4">
+                            {sortedProducts.map((product, index) => (
+                                <div 
+                                    key={product.id} 
+                                    className="product-card"
+                                    onClick={() => handleProductClick(product)}
+                                >
+                                    <div className="product-image" style={{background: categoryGradients[product.category]}}>
+                                        {categoryIcons[product.category]}
+                                    </div>
+                                    <div className="product-body">
+                                        <div className="product-category">{product.category}</div>
+                                        <div className="product-name">{product.name}</div>
+                                        <div className="product-sku">SKU: {product.sku}</div>
+                                        <div className="product-stats">
+                                            <div className="product-stat">
+                                                <span className="product-stat-label">Unidades</span>
+                                                <span className="product-stat-value">{product.units}</span>
+                                            </div>
+                                            <div className="product-stat">
+                                                <span className="product-stat-label">Margen</span>
+                                                <span className="product-stat-value" style={{color: product.margin >= 40 ? '#10b981' : product.margin >= 30 ? '#f59e0b' : '#ef4444'}}>
+                                                    {product.margin}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="product-footer">
+                                        <div className="product-price">{formatCurrency(product.revenue)}</div>
+                                        <div className={`product-stock ${product.stock > 50 ? 'stock-high' : product.stock > 20 ? 'stock-medium' : 'stock-low'}`}>
+                                            Stock: {product.stock}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </>
+            );
+        };
+
+        // Tab: Inventario
+        const InventoryTab = ({ data, formatCurrency }) => {
+            const handleProductClick = (sku) => {
+                const productUrl = `https://barrabes.com/products/${sku}`;
+                alert(`Redirigiendo a producto: ${productUrl}`);
+            };
+
+            return (
+                <>
+                    {/* Stock bajo */}
+                    <div className="card">
+                        <div className="card-header">
+                            <h2><span className="emoji">🚨</span>Productos con Stock Crítico</h2>
+                            <button className="btn btn-danger">
+                                📧 Enviar alertas a compras
+                            </button>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th>Stock Actual</th>
+                                        <th>Ventas/Día</th>
+                                        <th>Días Restantes</th>
+                                        <th>Valor</th>
+                                        <th>Prioridad</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {data.lowStock.map((product, index) => (
+                                        <tr key={index}>
+                                            <td>
+                                                <div>
+                                                    <a 
+                                                        href="#" 
+                                                        className="table-link"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            handleProductClick(product.sku);
+                                                        }}
+                                                    >
+                                                        {product.name}
+                                                    </a>
+                                                    <div className="product-sku">{product.sku}</div>
+                                                </div>
+                                            </td>
+                                            <td className="font-semibold text-red-600">{product.stock}</td>
+                                            <td>{product.dailySales.toFixed(1)}</td>
+                                            <td>
+                                                <span className={`badge ${product.daysLeft < 5 ? 'badge-red' : 'badge-yellow'}`}>
+                                                    {product.daysLeft.toFixed(1)} días
+                                                </span>
+                                            </td>
+                                            <td className="font-semibold">{formatCurrency(product.value)}</td>
+                                            <td>
+                                                <span className={`badge ${product.priority === 'critical' ? 'badge-red' : 'badge-yellow'}`}>
+                                                    {product.priority === 'critical' ? '🔥 CRÍTICO' : '⚠️ Advertencia'}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <button className="btn btn-primary" style={{padding: '0.5rem 1rem'}}>
+                                                    📦 Reponer
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Dead stock */}
+                    <div className="card">
+                        <div className="card-header">
+                            <h2><span className="emoji">📦</span>Stock Muerto</h2>
+                            <button className="btn btn-warning">
+                                🏷️ Crear campaña liquidación
+                            </button>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th>Categoría</th>
+                                        <th>Stock</th>
+                                        <th>Días sin vender</th>
+                                        <th>Valor PVP</th>
+                                        <th>Coste</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {data.deadStock.map((product, index) => (
+                                        <tr key={index}>
+                                            <td>
+                                                <div>
+                                                    <a 
+                                                        href="#" 
+                                                        className="table-link"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            handleProductClick(product.sku);
+                                                        }}
+                                                    >
+                                                        {product.name}
+                                                    </a>
+                                                    <div className="product-sku">{product.sku}</div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className="badge badge-gray">
+                                                    {categoryIcons[product.category]} {product.category}
+                                                </span>
+                                            </td>
+                                            <td className="font-semibold">{product.stock}</td>
+                                            <td>
+                                                <span className="badge badge-red">
+                                                    {product.lastSale} días
+                                                </span>
+                                            </td>
+                                            <td className="font-semibold">{formatCurrency(product.value)}</td>
+                                            <td className="text-gray-500">{formatCurrency(product.cost)}</td>
+                                            <td>
+                                                <button className="btn btn-ghost" style={{padding: '0.5rem 1rem'}}>
+                                                    🏷️ Liquidar
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="info-box">
+                            <p className="title">
+                                💰 Total inmovilizado: {formatCurrency(49940)} en valor PVP • {formatCurrency(34958)} en coste
+                            </p>
+                            <p className="text">
+                                💡 Sugerencia: Planifica una campaña de liquidación con descuentos del 30-50% para liberar capital
+                            </p>
+                        </div>
+                    </div>
+                </>
+            );
+        };
+
+        // Tab: Categorías
+        const CategoriesTab = ({ data, formatCurrency, COLORS }) => (
+            <>
+                {/* Category Cards Grid */}
+                <div className="grid grid-3">
+                    {data.revenueByCategory.map((cat, index) => (
+                        <div key={index} className="card metric-card" style={{borderTop: `4px solid ${COLORS[index]}`}}>
+                            <div className="metric-header">
+                                <div>
+                                    <div style={{fontSize: '2.5rem', marginBottom: '0.5rem'}}>{categoryIcons[cat.category]}</div>
+                                    <h3 className="metric-title">{cat.category}</h3>
+                                </div>
+                            </div>
+                            <div className="metric-value" style={{color: COLORS[index]}}>{formatCurrency(cat.revenue)}</div>
+                            <div style={{marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9'}}>
+                                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.875rem'}}>
+                                    <span style={{color: '#6b7280'}}>Pedidos:</span>
+                                    <span style={{fontWeight: '600', color: '#111827'}}>{cat.orders}</span>
+                                </div>
+                                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.875rem'}}>
+                                    <span style={{color: '#6b7280'}}>Ticket medio:</span>
+                                    <span style={{fontWeight: '600', color: '#111827'}}>{formatCurrency(cat.avgTicket)}</span>
+                                </div>
+                                <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem'}}>
+                                    <span style={{color: '#6b7280'}}>% del total:</span>
+                                    <span style={{fontWeight: '700', color: COLORS[index]}}>{cat.percentage}%</span>
+                                </div>
+                            </div>
+                            <div style={{marginTop: '1rem'}}>
+                                <div className="progress-bar" style={{maxWidth: '100%'}}>
+                                    <div 
+                                        className="progress-fill" 
+                                        style={{width: `${cat.percentage * 3.6}%`, background: COLORS[index]}}
+                                    ></div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="grid grid-2">
+                    {/* Gráfico de barras */}
+                    <div className="card">
+                        <div className="card-header">
+                            <h2>📊 Revenue por Categoría</h2>
+                        </div>
+                        <BarChart data={data.revenueByCategory} title="Revenue" />
+                    </div>
+
+                    {/* Pie chart */}
+                    <div className="card">
+                        <div className="card-header">
+                            <h2>🥧 Distribución de Ventas</h2>
+                        </div>
+                        <PieChart data={data.revenueByCategory} title="Distribución" />
+                    </div>
+                </div>
+
+                {/* Tabla detallada */}
+                <div className="card">
+                    <div className="card-header">
+                        <h2>📋 Análisis Detallado por Categoría</h2>
+                        <button className="btn btn-primary">
+                            📥 Exportar informe
+                        </button>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Categoría</th>
+                                    <th>Revenue</th>
+                                    <th>% Total</th>
+                                    <th>Pedidos</th>
+                                    <th>Ticket Medio</th>
+                                    <th>Tendencia</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {data.revenueByCategory.map((category, index) => (
+                                    <tr key={index}>
+                                        <td className="font-bold">
+                                            <div className="category-badge">
+                                                <div className="color-dot" style={{backgroundColor: COLORS[index % COLORS.length]}}></div>
+                                                <span style={{fontSize: '1.25rem', marginRight: '0.5rem'}}>{categoryIcons[category.category]}</span>
+                                                {category.category}
+                                            </div>
+                                        </td>
+                                        <td className="font-bold" style={{fontSize: '1rem'}}>
+                                            {formatCurrency(category.revenue)}
+                                        </td>
+                                        <td>
+                                            <div className="progress-container">
+                                                <div className="progress-bar">
+                                                    <div 
+                                                        className="progress-fill" 
+                                                        style={{width: `${category.percentage * 3.6}%`, background: COLORS[index]}}
+                                                    ></div>
+                                                </div>
+                                                <span className="font-semibold">{category.percentage}%</span>
+                                            </div>
+                                        </td>
+                                        <td className="font-semibold">{category.orders}</td>
+                                        <td>{formatCurrency(category.avgTicket)}</td>
+                                        <td>
+                                            <span className="metric-trend">
+                                                ↗️ {Math.floor(Math.random() * 20 + 5)}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </>
+        );
+
+        // Componente MetricCard
+        const MetricCard = ({ title, value, subtitle, trend, icon }) => (
+            <div className="card metric-card">
+                <div className="metric-header">
+                    <h3 className="metric-title">{title}</h3>
+                    <span className="metric-icon">{icon}</span>
+                </div>
+                <p className="metric-value">{value}</p>
+                <div className="metric-footer">
+                    <p className="metric-subtitle">{subtitle}</p>
+                    <span className="metric-trend">{trend}</span>
+                </div>
+            </div>
+        );
+
+        // Renderizar using React 18 createRoot and wait for DOM ready
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('root');
+            if (!container) {
+                console.error('Target container not found. Ensure there is an element with id="root" in the HTML.');
+            } else {
+                const root = ReactDOM.createRoot(container);
+                root.render(<Dashboard />);
+            }
+        });
+    </script>
+</body>
+</html>
