@@ -1,0 +1,1652 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retail Analytics Pro - Dashboard</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            color: #1a1a1a;
+        }
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: white;
+            border-right: 1px solid #e5e7eb;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .sidebar-header h1 {
+            font-size: 1.4rem;
+            color: #1a1a1a;
+            font-weight: 700;
+        }
+        .sidebar-header p {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+        .sidebar-nav {
+            padding: 1rem 0;
+        }
+        .nav-section {
+            margin-bottom: 1.5rem;
+        }
+        .nav-section-title {
+            padding: 0.5rem 1.5rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #9ca3af;
+            margin-bottom: 0.5rem;
+        }
+        .nav-separator {
+            height: 1px;
+            background: linear-gradient(to right, transparent, #e5e7eb, transparent);
+            margin: 1rem 1.5rem;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            gap: 0.75rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+        .nav-item:hover {
+            background: #f9fafb;
+            color: #1a1a1a;
+        }
+        .nav-item.active {
+            background: #eff6ff;
+            border-left-color: #3b82f6;
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        .nav-icon {
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+        /* Main content */
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            padding: 2rem;
+        }
+        .page-header {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid #e5e7eb;
+        }
+        .page-header h2 {
+            font-size: 1.75rem;
+            color: #1a1a1a;
+            margin-bottom: 0.5rem;
+        }
+        .page-header p {
+            color: #6b7280;
+            font-size: 0.95rem;
+        }
+        .grid {
+            display: grid;
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .grid-2 { grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); }
+        .grid-3 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+        .grid-4 { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid #e5e7eb;
+            transition: all 0.2s;
+        }
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+        .card-header {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #1a1a1a;
+        }
+        /* Metric Cards */
+        .metric-card {
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+        }
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin: 0.75rem 0 0.5rem 0;
+            color: #1a1a1a;
+        }
+        .metric-label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            font-weight: 500;
+        }
+        .metric-change {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+        .metric-change.positive {
+            color: #10b981;
+        }
+        .metric-change.negative {
+            color: #ef4444;
+        }
+        /* Product Cards */
+        .product-card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+            transition: all 0.2s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .product-card:hover {
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            border-color: #3b82f6;
+            transform: translateY(-4px);
+        }
+        .product-card-star {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #fbbf24;
+            transition: all 0.2s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .product-card-star:hover {
+            box-shadow: 0 8px 20px rgba(251, 191, 36, 0.3);
+            border-color: #f59e0b;
+            transform: translateY(-4px);
+            background: #fffbeb;
+        }
+        .product-image {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            background: #f3f4f6;
+        }
+        .product-body {
+            padding: 1rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .product-brand {
+            font-size: 0.7rem;
+            color: #3b82f6;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .product-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin: 0.5rem 0;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 2.4rem;
+        }
+        .product-price {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin: 0.5rem 0;
+        }
+        .product-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: auto;
+            padding-top: 0.75rem;
+        }
+        .stat-box {
+            background: #f9fafb;
+            padding: 0.5rem;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stat-label {
+            font-size: 0.65rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .stat-value {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-top: 0.25rem;
+        }
+        /* Filters */
+        .filters {
+            background: white;
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid #e5e7eb;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .filter-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6b7280;
+        }
+        select, input[type="text"] {
+            padding: 0.625rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            background: white;
+        }
+        select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        /* Category Chips */
+        .category-filter {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+        .category-chip {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .category-chip:hover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+        .category-chip.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .badge-success { background: #d1fae5; color: #065f46; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
+        .badge-info { background: #dbeafe; color: #1e40af; }
+        /* Buttons */
+        .btn {
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+        }
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+        .link-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.45rem 0.875rem;
+            background: #3b82f6;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .link-btn:hover {
+            background: #2563eb;
+        }
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th {
+            background: #f9fafb;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #6b7280;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        td {
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 0.875rem;
+        }
+        tbody tr:hover {
+            background: #f9fafb;
+        }
+        /* Alerts */
+        .alert-box {
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid;
+            margin-bottom: 1rem;
+        }
+        .alert-critical {
+            background: #fef2f2;
+            border-color: #dc2626;
+        }
+        .alert-warning {
+            background: #fffbeb;
+            border-color: #f59e0b;
+        }
+        .alert-success {
+            background: #f0fdf4;
+            border-color: #10b981;
+        }
+        /* Charts */
+        .chart-container {
+            position: relative;
+            height: 280px;
+            margin-top: 1rem;
+        }
+        .chart-controls {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .chart-btn {
+            padding: 0.5rem 0.875rem;
+            border: 1px solid #d1d5db;
+            background: white;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .chart-btn:hover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+        .chart-btn.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        .export-btn {
+            padding: 0.625rem 1rem;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .export-btn:hover {
+            background: #059669;
+            transform: translateY(-1px);
+        }
+        /* Prediction Card */
+        .prediction-card {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            color: white;
+            border: none;
+        }
+        .prediction-card .card-header {
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Base de datos mejorada
+        const mockData = {
+            products: [
+                {
+                    id: 1,
+                    sku: "BAR-SKI-001",
+                    name: "Botas Esquí Scarpa Maestrale RS",
+                    brand: "Scarpa",
+                    category: "Esquí",
+                    price: 599.95,
+                    cost: 389.97,
+                    stock: 12,
+                    unitsSold: 89,
+                    revenue: 53395.55,
+                    margin: 35,
+                    image: "https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400&h=400&fit=crop",
+                    url: "https://www.barrabes.com/esqui-de-montana/2-10004-botas/",
+                    season: "Invierno",
+                    isStar: true
+                },
+                {
+                    id: 2,
+                    sku: "BAR-TRK-045",
+                    name: "Mochila Osprey Atmos 65L",
+                    brand: "Osprey",
+                    category: "Trekking",
+                    price: 249.95,
+                    cost: 144.97,
+                    stock: 45,
+                    unitsSold: 156,
+                    revenue: 38992.20,
+                    margin: 42,
+                    image: "https://images.unsplash.com/photo-1622260614153-03223fb72052?w=400&h=400&fit=crop",
+                    url: "https://www.barrabes.com/trekking/2-2-mochilas/",
+                    season: "Todo el año",
+                    isStar: true
+                },
+                {
+                    id: 3,
+                    sku: "FOR-RUN-234",
+                    name: "Zapatillas Salomon Speedcross 5",
+                    brand: "Salomon",
+                    category: "Trail Running",
+                    price: 139.95,
+                    cost: 83.97,
+                    stock: 156,
+                    unitsSold: 234,
+                    revenue: 32748.30,
+                    margin: 40,
+                    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=400&fit=crop",
+                    url: "https://www.forumsport.com/es-es/zapatillas-trail-running/",
+                    season: "Todo el año",
+                    isStar: true
+                },
+                {
+                    id: 4,
+                    sku: "BAS-FUT-567",
+                    name: "Botas Fútbol Nike Mercurial Superfly",
+                    brand: "Nike",
+                    category: "Fútbol",
+                    price: 279.99,
+                    cost: 168,
+                    stock: 67,
+                    unitsSold: 145,
+                    revenue: 40598.55,
+                    margin: 40,
+                    image: "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=400&h=400&fit=crop",
+                    url: "https://base.net/collections/botas-de-futbol",
+                    season: "Todo el año",
+                    isStar: true
+                },
+                {
+                    id: 5,
+                    sku: "BAR-ESC-089",
+                    name: "Arnés Escalada Petzl Aquila",
+                    brand: "Petzl",
+                    category: "Escalada",
+                    price: 119.95,
+                    cost: 74.37,
+                    stock: 89,
+                    unitsSold: 203,
+                    revenue: 24349.85,
+                    margin: 38,
+                    image: "https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400&h=400&fit=crop",
+                    url: "https://www.barrabes.com/escalada-alpinismo/",
+                    season: "Todo el año",
+                    isStar: false
+                },
+                {
+                    id: 6,
+                    sku: "FOR-CIC-123",
+                    name: "Bicicleta MTB Specialized Rockhopper",
+                    brand: "Specialized",
+                    category: "Ciclismo",
+                    price: 899.00,
+                    cost: 539.40,
+                    stock: 8,
+                    unitsSold: 34,
+                    revenue: 30566.00,
+                    margin: 40,
+                    image: "https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=400&h=400&fit=crop",
+                    url: "https://www.forumsport.com/es-es/bicicletas/",
+                    season: "Verano",
+                    isStar: true
+                },
+                {
+                    id: 7,
+                    sku: "BAS-RUN-456",
+                    name: "Zapatillas Running Asics Gel Nimbus",
+                    brand: "Asics",
+                    category: "Running",
+                    price: 169.95,
+                    cost: 101.97,
+                    stock: 123,
+                    unitsSold: 289,
+                    revenue: 49115.55,
+                    margin: 40,
+                    image: "https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400&h=400&fit=crop",
+                    url: "https://base.net/collections/zapatillas-running",
+                    season: "Todo el año",
+                    isStar: true
+                },
+                {
+                    id: 8,
+                    sku: "BAR-CAM-234",
+                    name: "Tienda Camping MSR Hubba Hubba",
+                    brand: "MSR",
+                    category: "Camping",
+                    price: 449.95,
+                    cost: 292.47,
+                    stock: 19,
+                    unitsSold: 43,
+                    revenue: 19347.85,
+                    margin: 35,
+                    image: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=400&h=400&fit=crop",
+                    url: "https://www.barrabes.com/camping/2-2-tiendas/",
+                    season: "Verano",
+                    isStar: false
+                },
+                {
+                    id: 9,
+                    sku: "FOR-FIT-789",
+                    name: "Mancuernas Ajustables 24kg",
+                    brand: "Bowflex",
+                    category: "Fitness",
+                    price: 349.00,
+                    cost: 209.40,
+                    stock: 34,
+                    unitsSold: 67,
+                    revenue: 23383.00,
+                    margin: 40,
+                    image: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=400&fit=crop",
+                    url: "https://www.forumsport.com/es-es/fitness/",
+                    season: "Todo el año",
+                    isStar: false
+                },
+                {
+                    id: 10,
+                    sku: "BAR-SKI-234",
+                    name: "Esquís Atomic Maverick 95",
+                    brand: "Atomic",
+                    category: "Esquí",
+                    price: 649.95,
+                    cost: 422.47,
+                    stock: 8,
+                    unitsSold: 45,
+                    revenue: 29247.75,
+                    margin: 35,
+                    image: "https://images.unsplash.com/photo-1605540436563-5bca919ae766?w=400&h=400&fit=crop",
+                    url: "https://www.barrabes.com/esqui-de-montana/2-10002-esquis/",
+                    season: "Invierno",
+                    isStar: true
+                },
+                {
+                    id: 11,
+                    sku: "BAS-FUT-890",
+                    name: "Camiseta España Mundial 2026",
+                    brand: "Adidas",
+                    category: "Fútbol",
+                    price: 89.99,
+                    cost: 45,
+                    stock: 234,
+                    unitsSold: 456,
+                    revenue: 41035.44,
+                    margin: 50,
+                    image: "https://images.unsplash.com/photo-1614632537423-1e6c2e446446?w=400&h=400&fit=crop",
+                    url: "https://base.net/products/adidas-camiseta-authentic-de-la-primera-equipacion-de-espana-26",
+                    season: "Todo el año",
+                    isStar: true
+                },
+                {
+                    id: 12,
+                    sku: "FOR-TRK-567",
+                    name: "Chaqueta Gore-Tex Arc'teryx",
+                    brand: "Arc'teryx",
+                    category: "Trekking",
+                    price: 599.00,
+                    cost: 401.33,
+                    stock: 23,
+                    unitsSold: 56,
+                    revenue: 33544.00,
+                    margin: 33,
+                    image: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=400&h=400&fit=crop",
+                    url: "https://www.forumsport.com/es-es/chaquetas-montana/",
+                    season: "Todo el año",
+                    isStar: false
+                }
+            ],
+            
+            lowStock: [
+                { sku: "BAR-SKI-001", name: "Botas Esquí Scarpa Maestrale RS", stock: 12, dailySales: 2.9, daysLeft: 4.1, priority: "critical", value: 7199.4 },
+                { sku: "BAR-SKI-234", name: "Esquís Atomic Maverick 95", stock: 8, dailySales: 1.5, daysLeft: 5.3, priority: "critical", value: 5199.6 },
+                { sku: "FOR-CIC-123", name: "Bicicleta MTB Specialized", stock: 8, dailySales: 1.1, daysLeft: 7.3, priority: "warning", value: 7192 }
+            ],
+            
+            predictions: [
+                {
+                    category: "Esquí",
+                    currentRevenue: 82643,
+                    predictedRevenue: 97000,
+                    growth: 17.4,
+                    recommendation: "Stock alto. Temporada fuerte próxima.",
+                    keyProducts: ["Botas Scarpa", "Esquís Atomic", "Casco Smith"]
+                },
+                {
+                    category: "Trail Running",
+                    currentRevenue: 32748,
+                    predictedRevenue: 40300,
+                    growth: 23.1,
+                    recommendation: "Tendencia creciente. Aumentar stock.",
+                    keyProducts: ["Salomon Speedcross", "Mochila trail", "GPS Garmin"]
+                },
+                {
+                    category: "Fútbol",
+                    currentRevenue: 81633,
+                    predictedRevenue: 88500,
+                    growth: 8.4,
+                    recommendation: "Crecimiento moderado. Mundial 2026.",
+                    keyProducts: ["Botas Nike", "Camiseta España", "Balones"]
+                }
+            ],
+            
+            historicalSales: [
+                { month: 'Ene', sales: 245000, units: 1230 },
+                { month: 'Feb', sales: 289000, units: 1450 },
+                { month: 'Mar', sales: 312000, units: 1567 },
+                { month: 'Abr', sales: 298000, units: 1490 },
+                { month: 'May', sales: 334000, units: 1678 },
+                { month: 'Jun', sales: 356000, units: 1789 },
+            ],
+            
+            categoryRevenue: [
+                { category: 'Esquí', revenue: 82643, percentage: 24.8 },
+                { category: 'Fútbol', revenue: 81633, percentage: 24.5 },
+                { category: 'Running', revenue: 49115, percentage: 14.7 },
+                { category: 'Trekking', revenue: 72536, percentage: 21.8 },
+                { category: 'Trail Running', revenue: 32748, percentage: 9.8 },
+                { category: 'Otros', revenue: 14625, percentage: 4.4 },
+            ]
+        };
+
+        // ========== COMPONENTES DE TABS ==========
+
+        const DashboardTab = ({ data }) => {
+            const lineChartRef = useRef(null);
+            const barChartRef = useRef(null);
+            const lineChartInstance = useRef(null);
+            const barChartInstance = useRef(null);
+            
+            const [chartPeriod, setChartPeriod] = useState('6m');
+            const [chartYear, setChartYear] = useState('2024');
+            
+            const totalRevenue = data.products.reduce((sum, p) => sum + p.revenue, 0);
+            const totalUnits = data.products.reduce((sum, p) => sum + p.unitsSold, 0);
+            const avgMargin = data.products.reduce((sum, p) => sum + p.margin, 0) / data.products.length;
+            const lowStockCount = data.products.filter(p => p.stock < 30).length;
+
+            // Función para exportar a Excel
+            const exportToExcel = () => {
+                const wb = XLSX.utils.book_new();
+                
+                // Hoja 1: Resumen
+                const summaryData = [
+                    ['Métrica', 'Valor'],
+                    ['Revenue Total', '€' + totalRevenue.toFixed(2)],
+                    ['Unidades Vendidas', totalUnits],
+                    ['Margen Promedio', avgMargin.toFixed(1) + '%'],
+                    ['Alertas de Stock', lowStockCount]
+                ];
+                const ws1 = XLSX.utils.aoa_to_sheet(summaryData);
+                XLSX.utils.book_append_sheet(wb, ws1, 'Resumen');
+                
+                // Hoja 2: Productos
+                const productsData = [
+                    ['SKU', 'Nombre', 'Marca', 'Categoría', 'Precio', 'Stock', 'Vendido', 'Revenue', 'Margen %']
+                ];
+                data.products.forEach(p => {
+                    productsData.push([
+                        p.sku, p.name, p.brand, p.category, p.price, p.stock, p.unitsSold, p.revenue, p.margin
+                    ]);
+                });
+                const ws2 = XLSX.utils.aoa_to_sheet(productsData);
+                XLSX.utils.book_append_sheet(wb, ws2, 'Productos');
+                
+                // Hoja 3: Stock Bajo
+                const lowStockData = [
+                    ['SKU', 'Nombre', 'Stock', 'Ventas/Día', 'Días Restantes', 'Valor', 'Prioridad']
+                ];
+                data.lowStock.forEach(p => {
+                    lowStockData.push([
+                        p.sku, p.name, p.stock, p.dailySales, p.daysLeft, p.value, p.priority
+                    ]);
+                });
+                const ws3 = XLSX.utils.aoa_to_sheet(lowStockData);
+                XLSX.utils.book_append_sheet(wb, ws3, 'Stock Crítico');
+                
+                // Hoja 4: Ventas Históricas
+                const salesData = [
+                    ['Mes', 'Ventas (€)', 'Unidades']
+                ];
+                data.historicalSales.forEach(s => {
+                    salesData.push([s.month, s.sales, s.units]);
+                });
+                const ws4 = XLSX.utils.aoa_to_sheet(salesData);
+                XLSX.utils.book_append_sheet(wb, ws4, 'Ventas Históricas');
+                
+                // Descargar
+                XLSX.writeFile(wb, `retail_analytics_${new Date().toISOString().split('T')[0]}.xlsx`);
+            };
+
+            // Función para filtrar datos según periodo
+            const getFilteredData = () => {
+                const monthsMap = {
+                    '3m': 3,
+                    '6m': 6,
+                    '12m': 12
+                };
+                const months = monthsMap[chartPeriod] || 6;
+                return data.historicalSales.slice(-months);
+            };
+
+            useEffect(() => {
+                const filteredData = getFilteredData();
+
+                // Line Chart - Historical Sales con zoom
+                if (lineChartRef.current) {
+                    const ctx = lineChartRef.current.getContext('2d');
+                    if (lineChartInstance.current) lineChartInstance.current.destroy();
+
+                    lineChartInstance.current = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: filteredData.map(d => d.month),
+                            datasets: [{
+                                label: 'Ventas (€)',
+                                data: filteredData.map(d => d.sales),
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                borderWidth: 2,
+                                pointRadius: 4,
+                                pointBackgroundColor: '#3b82f6'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { 
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return '€' + context.parsed.y.toLocaleString();
+                                        }
+                                    }
+                                },
+                                zoom: {
+                                    zoom: {
+                                        wheel: {
+                                            enabled: true,
+                                        },
+                                        pinch: {
+                                            enabled: true
+                                        },
+                                        mode: 'xy',
+                                    },
+                                    pan: {
+                                        enabled: true,
+                                        mode: 'xy',
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: false,
+                                    ticks: {
+                                        callback: value => '€' + (value/1000) + 'K'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // Bar Chart - Category Revenue
+                if (barChartRef.current) {
+                    const ctx = barChartRef.current.getContext('2d');
+                    if (barChartInstance.current) barChartInstance.current.destroy();
+
+                    barChartInstance.current = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: data.categoryRevenue.map(d => d.category),
+                            datasets: [{
+                                label: 'Revenue',
+                                data: data.categoryRevenue.map(d => d.revenue),
+                                backgroundColor: '#3b82f6',
+                                borderRadius: 8
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { 
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return '€' + context.parsed.y.toLocaleString();
+                                        }
+                                    }
+                                },
+                                zoom: {
+                                    zoom: {
+                                        wheel: {
+                                            enabled: true,
+                                        },
+                                        pinch: {
+                                            enabled: true
+                                        },
+                                        mode: 'y',
+                                    },
+                                    pan: {
+                                        enabled: true,
+                                        mode: 'y',
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: value => '€' + (value/1000) + 'K'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                return () => {
+                    if (lineChartInstance.current) lineChartInstance.current.destroy();
+                    if (barChartInstance.current) barChartInstance.current.destroy();
+                };
+            }, [chartPeriod]);
+
+            const resetZoom = () => {
+                if (lineChartInstance.current) lineChartInstance.current.resetZoom();
+                if (barChartInstance.current) barChartInstance.current.resetZoom();
+            };
+
+            return (
+                <>
+                    <div className="page-header">
+                        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                            <div>
+                                <h2><i className="fas fa-chart-bar" style={{marginRight: '0.75rem'}}></i>Dashboard General</h2>
+                                <p>Vista general de métricas y rendimiento</p>
+                            </div>
+                            <button className="export-btn" onClick={exportToExcel}>
+                                <i className="fas fa-file-excel"></i>
+                                Exportar a Excel
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-4">
+                        <div className="card metric-card">
+                            <div className="metric-label">Revenue Total</div>
+                            <div className="metric-value">€{(totalRevenue/1000).toFixed(0)}K</div>
+                            <div className="metric-change positive">+12.5% vs anterior</div>
+                        </div>
+                        <div className="card metric-card">
+                            <div className="metric-label">Unidades Vendidas</div>
+                            <div className="metric-value">{totalUnits}</div>
+                            <div className="metric-change positive">+8.3% vs anterior</div>
+                        </div>
+                        <div className="card metric-card">
+                            <div className="metric-label">Margen Promedio</div>
+                            <div className="metric-value">{avgMargin.toFixed(1)}%</div>
+                            <div className="metric-change" style={{color: '#6b7280'}}>Óptimo: &gt;35%</div>
+                        </div>
+                        <div className="card metric-card">
+                            <div className="metric-label">Alertas de Stock</div>
+                            <div className="metric-value" style={{color: '#dc2626'}}>{lowStockCount}</div>
+                            <div className="metric-change negative">Requieren atención</div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-2">
+                        <div className="card">
+                            <div className="card-header">Evolución de Ventas</div>
+                            <div className="chart-controls">
+                                <button 
+                                    className={`chart-btn ${chartPeriod === '3m' ? 'active' : ''}`}
+                                    onClick={() => setChartPeriod('3m')}
+                                >
+                                    3 Meses
+                                </button>
+                                <button 
+                                    className={`chart-btn ${chartPeriod === '6m' ? 'active' : ''}`}
+                                    onClick={() => setChartPeriod('6m')}
+                                >
+                                    6 Meses
+                                </button>
+                                <button 
+                                    className={`chart-btn ${chartPeriod === '12m' ? 'active' : ''}`}
+                                    onClick={() => setChartPeriod('12m')}
+                                >
+                                    12 Meses
+                                </button>
+                                <select 
+                                    value={chartYear} 
+                                    onChange={(e) => setChartYear(e.target.value)}
+                                    style={{padding: '0.5rem 0.75rem', fontSize: '0.8rem'}}
+                                >
+                                    <option value="2024">2024</option>
+                                    <option value="2023">2023</option>
+                                    <option value="2022">2022</option>
+                                </select>
+                                <button className="chart-btn" onClick={resetZoom}>
+                                    <i className="fas fa-search-minus"></i> Reset Zoom
+                                </button>
+                            </div>
+                            <div style={{fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem'}}>
+                                <i className="fas fa-info-circle"></i> Usa la rueda del ratón para hacer zoom, arrastra para desplazar
+                            </div>
+                            <div className="chart-container">
+                                <canvas ref={lineChartRef}></canvas>
+                            </div>
+                        </div>
+                        
+                        <div className="card">
+                            <div className="card-header">Revenue por Categoría</div>
+                            <div className="chart-controls">
+                                <button className="chart-btn" onClick={resetZoom}>
+                                    <i className="fas fa-search-minus"></i> Reset Zoom
+                                </button>
+                            </div>
+                            <div style={{fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem'}}>
+                                <i className="fas fa-info-circle"></i> Usa la rueda del ratón para hacer zoom
+                            </div>
+                            <div className="chart-container">
+                                <canvas ref={barChartRef}></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-2">
+                        <div className="card">
+                            <div className="card-header">Alertas Importantes</div>
+                            <div className="alert-box alert-critical">
+                                <div style={{fontWeight: '600', color: '#991b1b', marginBottom: '0.5rem', fontSize: '0.9rem'}}>
+                                    <i className="fas fa-exclamation-triangle" style={{marginRight: '0.5rem'}}></i>
+                                    Stock Crítico
+                                </div>
+                                <div style={{fontSize: '0.875rem', color: '#dc2626'}}>{data.lowStock.length} productos con menos de 7 días de stock</div>
+                            </div>
+                            <div className="alert-box alert-warning">
+                                <div style={{fontWeight: '600', color: '#92400e', marginBottom: '0.5rem', fontSize: '0.9rem'}}>
+                                    <i className="fas fa-info-circle" style={{marginRight: '0.5rem'}}></i>
+                                    Revisión Necesaria
+                                </div>
+                                <div style={{fontSize: '0.875rem', color: '#f59e0b'}}>Varios productos requieren reposición urgente</div>
+                            </div>
+                            <div className="alert-box alert-success">
+                                <div style={{fontWeight: '600', color: '#065f46', marginBottom: '0.5rem', fontSize: '0.9rem'}}>
+                                    <i className="fas fa-check-circle" style={{marginRight: '0.5rem'}}></i>
+                                    Rendimiento Excelente
+                                </div>
+                                <div style={{fontSize: '0.875rem', color: '#10b981'}}>8 productos superan objetivos de venta</div>
+                            </div>
+                        </div>
+
+                        <div className="card">
+                            <div className="card-header">Top 5 Productos Este Mes</div>
+                            <div style={{overflowX: 'auto'}}>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Producto</th>
+                                            <th>Revenue</th>
+                                            <th>Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {data.products.slice(0, 5).map(p => (
+                                            <tr key={p.id}>
+                                                <td>
+                                                    <div style={{fontWeight: '600', marginBottom: '0.25rem'}}>{p.name}</div>
+                                                    <div style={{fontSize: '0.75rem', color: '#6b7280'}}>{p.brand}</div>
+                                                </td>
+                                                <td><strong>€{(p.revenue/1000).toFixed(1)}K</strong></td>
+                                                <td><a href={p.url} target="_blank" className="link-btn">Ver →</a></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </>
+            );
+        };
+
+        const ProductsTab = ({ data, categoryFilter, setCategoryFilter, searchTerm, setSearchTerm, filteredProducts, categories }) => {
+            return (
+                <>
+                    <div className="page-header">
+                        <h2><i className="fas fa-box" style={{marginRight: '0.75rem'}}></i>Catálogo de Productos</h2>
+                        <p>Explora y filtra el inventario completo</p>
+                    </div>
+
+                    <div className="filters">
+                        <div className="filter-group">
+                            <label className="filter-label">Buscar Producto</label>
+                            <input 
+                                type="text" 
+                                placeholder="Nombre, marca o SKU..." 
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                style={{width: '280px'}}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="card">
+                        <div className="card-header">Filtrar por Categoría</div>
+                        <div className="category-filter">
+                            <div 
+                                className={`category-chip ${categoryFilter === 'all' ? 'active' : ''}`}
+                                onClick={() => setCategoryFilter('all')}
+                            >
+                                Todas ({data.products.length})
+                            </div>
+                            {categories.map(cat => {
+                                const count = data.products.filter(p => p.category === cat).length;
+                                return (
+                                    <div 
+                                        key={cat}
+                                        className={`category-chip ${categoryFilter === cat ? 'active' : ''}`}
+                                        onClick={() => setCategoryFilter(cat)}
+                                    >
+                                        {cat} ({count})
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="card">
+                        <div className="card-header">
+                            Productos ({filteredProducts.length} resultados)
+                        </div>
+                        <div className="grid grid-4">
+                            {filteredProducts.map(product => (
+                                <div key={product.id} className="product-card">
+                                    <img src={product.image} alt={product.name} className="product-image" />
+                                    <div className="product-body">
+                                        <div className="product-brand">{product.brand}</div>
+                                        <div className="product-name">{product.name}</div>
+                                        <div style={{fontSize: '0.7rem', color: '#9ca3af', fontFamily: 'monospace', marginBottom: '0.5rem'}}>
+                                            {product.sku}
+                                        </div>
+                                        
+                                        {product.isStar && (
+                                            <div style={{marginBottom: '0.5rem'}}>
+                                                <span className="badge badge-warning">
+                                                    <i className="fas fa-star" style={{marginRight: '0.25rem'}}></i>
+                                                    Estrella
+                                                </span>
+                                            </div>
+                                        )}
+                                        
+                                        <div className="product-price">€{product.price.toFixed(2)}</div>
+                                        
+                                        <div className="product-stats">
+                                            <div className="stat-box">
+                                                <div className="stat-label">Vendido</div>
+                                                <div className="stat-value">{product.unitsSold}</div>
+                                            </div>
+                                            <div className="stat-box">
+                                                <div className="stat-label">Stock</div>
+                                                <div className="stat-value" style={{color: product.stock < 20 ? '#ef4444' : '#10b981'}}>{product.stock}</div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div style={{marginTop: '0.75rem'}}>
+                                            <a href={product.url} target="_blank" className="link-btn" style={{width: '100%', justifyContent: 'center'}}>
+                                                Ver producto →
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </>
+            );
+        };
+
+        const InventoryTab = ({ data }) => {
+            return (
+                <>
+                    <div className="page-header">
+                        <h2><i className="fas fa-warehouse" style={{marginRight: '0.75rem'}}></i>Gestión de Inventario</h2>
+                        <p>Control de stock y alertas de reposición</p>
+                    </div>
+
+                    <div className="card">
+                        <div className="card-header">
+                            <i className="fas fa-exclamation-triangle" style={{marginRight: '0.5rem', color: '#dc2626'}}></i>
+                            Stock Crítico - Acción Urgente Requerida
+                        </div>
+                        <div style={{overflowX: 'auto'}}>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th>Stock</th>
+                                        <th>Ventas/Día</th>
+                                        <th>Días Restantes</th>
+                                        <th>Valor Stock</th>
+                                        <th>Prioridad</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {data.lowStock.map((item, i) => (
+                                        <tr key={i}>
+                                            <td>
+                                                <div style={{fontWeight: '600'}}>{item.name}</div>
+                                                <div style={{fontSize: '0.75rem', color: '#6b7280'}}>{item.sku}</div>
+                                            </td>
+                                            <td><strong style={{color: '#dc2626'}}>{item.stock}</strong></td>
+                                            <td>{item.dailySales.toFixed(1)}</td>
+                                            <td>
+                                                <span className={`badge ${item.priority === 'critical' ? 'badge-danger' : 'badge-warning'}`}>
+                                                    {item.daysLeft.toFixed(1)} días
+                                                </span>
+                                            </td>
+                                            <td>€{item.value.toLocaleString()}</td>
+                                            <td>
+                                                <span className={`badge ${item.priority === 'critical' ? 'badge-danger' : 'badge-warning'}`}>
+                                                    <i className={`fas ${item.priority === 'critical' ? 'fa-fire' : 'fa-exclamation-circle'}`} style={{marginRight: '0.25rem'}}></i>
+                                                    {item.priority === 'critical' ? 'CRÍTICO' : 'Atención'}
+                                                </span>
+                                            </td>
+                                            <td><button className="btn btn-primary"><i className="fas fa-box" style={{marginRight: '0.5rem'}}></i>Reponer</button></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div className="card">
+                        <div className="card-header">Resumen de Stock por Categoría</div>
+                        <div className="grid grid-3">
+                            {[...new Set(data.products.map(p => p.category))].map(cat => {
+                                const catProducts = data.products.filter(p => p.category === cat);
+                                const totalStock = catProducts.reduce((sum, p) => sum + p.stock, 0);
+                                const lowStock = catProducts.filter(p => p.stock < 30).length;
+                                return (
+                                    <div key={cat} className="card" style={{borderTop: '4px solid #3b82f6'}}>
+                                        <h3 style={{fontSize: '1rem', marginBottom: '1rem', fontWeight: '600'}}>{cat}</h3>
+                                        <div style={{display: 'grid', gap: '0.75rem'}}>
+                                            <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                                                <span style={{color: '#6b7280', fontSize: '0.85rem'}}>Total productos:</span>
+                                                <strong>{catProducts.length}</strong>
+                                            </div>
+                                            <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                                                <span style={{color: '#6b7280', fontSize: '0.85rem'}}>Stock total:</span>
+                                                <strong>{totalStock}</strong>
+                                            </div>
+                                            <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                                                <span style={{color: '#6b7280', fontSize: '0.85rem'}}>Stock bajo:</span>
+                                                <strong style={{color: lowStock > 0 ? '#dc2626' : '#10b981'}}>{lowStock}</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </>
+            );
+        };
+
+        const PredictionsTab = ({ data }) => {
+            const chartRef = useRef(null);
+            const chartInstance = useRef(null);
+
+            useEffect(() => {
+                if (chartRef.current) {
+                    const ctx = chartRef.current.getContext('2d');
+                    if (chartInstance.current) chartInstance.current.destroy();
+
+                    chartInstance.current = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: data.predictions.map(p => p.category),
+                            datasets: [
+                                {
+                                    label: 'Revenue Actual',
+                                    data: data.predictions.map(p => p.currentRevenue),
+                                    backgroundColor: '#94a3b8',
+                                    borderRadius: 6
+                                },
+                                {
+                                    label: 'Predicción',
+                                    data: data.predictions.map(p => p.predictedRevenue),
+                                    backgroundColor: '#3b82f6',
+                                    borderRadius: 6
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return context.dataset.label + ': €' + context.parsed.y.toLocaleString();
+                                        }
+                                    }
+                                },
+                                zoom: {
+                                    zoom: {
+                                        wheel: {
+                                            enabled: true,
+                                        },
+                                        pinch: {
+                                            enabled: true
+                                        },
+                                        mode: 'y',
+                                    },
+                                    pan: {
+                                        enabled: true,
+                                        mode: 'y',
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: value => '€' + (value/1000) + 'K'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                return () => {
+                    if (chartInstance.current) chartInstance.current.destroy();
+                };
+            }, []);
+
+            const resetZoom = () => {
+                if (chartInstance.current) chartInstance.current.resetZoom();
+            };
+
+            return (
+                <>
+                    <div className="page-header">
+                        <h2><i className="fas fa-crystal-ball" style={{marginRight: '0.75rem'}}></i>Predicciones de Temporada</h2>
+                        <p>Análisis predictivo para planificación de compras</p>
+                    </div>
+
+                    <div className="card">
+                        <div className="card-header">Comparativa: Actual vs Predicción</div>
+                        <div className="chart-controls">
+                            <button className="chart-btn" onClick={resetZoom}>
+                                <i className="fas fa-search-minus"></i> Reset Zoom
+                            </button>
+                        </div>
+                        <div style={{fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem'}}>
+                            <i className="fas fa-info-circle"></i> Usa la rueda del ratón para hacer zoom
+                        </div>
+                        <div className="chart-container">
+                            <canvas ref={chartRef}></canvas>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-3">
+                        {data.predictions.map((pred, i) => (
+                            <div key={i} className="card prediction-card">
+                                <h3 style={{fontSize: '1.3rem', marginBottom: '1rem', fontWeight: '700'}}>{pred.category}</h3>
+                                
+                                <div style={{background: 'rgba(255,255,255,0.15)', padding: '0.875rem', borderRadius: '8px', marginBottom: '0.875rem'}}>
+                                    <div style={{fontSize: '0.8rem', opacity: 0.9, marginBottom: '0.25rem'}}>Revenue Actual</div>
+                                    <div style={{fontSize: '1.5rem', fontWeight: '800'}}>€{(pred.currentRevenue/1000).toFixed(1)}K</div>
+                                </div>
+
+                                <div style={{background: 'rgba(255,255,255,0.25)', padding: '0.875rem', borderRadius: '8px', marginBottom: '0.875rem'}}>
+                                    <div style={{fontSize: '0.8rem', opacity: 0.9, marginBottom: '0.25rem'}}>Predicción Próxima Temporada</div>
+                                    <div style={{fontSize: '1.7rem', fontWeight: '800'}}>€{(pred.predictedRevenue/1000).toFixed(1)}K</div>
+                                    <div style={{fontSize: '1rem', fontWeight: '700', marginTop: '0.5rem'}}>
+                                        <i className="fas fa-arrow-trend-up" style={{marginRight: '0.5rem'}}></i>
+                                        +{pred.growth}%
+                                    </div>
+                                </div>
+
+                                <div style={{background: 'rgba(255,255,255,0.15)', padding: '0.875rem', borderRadius: '8px'}}>
+                                    <div style={{fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem'}}>
+                                        <i className="fas fa-lightbulb" style={{marginRight: '0.5rem'}}></i>
+                                        Recomendación
+                                    </div>
+                                    <div style={{fontSize: '0.85rem', opacity: 0.95}}>{pred.recommendation}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="card">
+                        <div className="card-header">Análisis Detallado por Categoría</div>
+                        <div style={{overflowX: 'auto'}}>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Categoría</th>
+                                        <th>Revenue Actual</th>
+                                        <th>Predicción</th>
+                                        <th>Crecimiento</th>
+                                        <th>Recomendación</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {data.predictions.map((pred, i) => (
+                                        <tr key={i}>
+                                            <td><strong>{pred.category}</strong></td>
+                                            <td>€{pred.currentRevenue.toLocaleString()}</td>
+                                            <td><strong style={{color: '#3b82f6'}}>€{pred.predictedRevenue.toLocaleString()}</strong></td>
+                                            <td>
+                                                <span className="badge badge-success" style={{fontSize: '0.8rem'}}>
+                                                    +{pred.growth}%
+                                                </span>
+                                            </td>
+                                            <td>{pred.recommendation}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </>
+            );
+        };
+
+        const StarsTab = ({ data }) => {
+            const starProducts = data.products.filter(p => p.isStar);
+            
+            return (
+                <>
+                    <div className="page-header">
+                        <h2><i className="fas fa-star" style={{marginRight: '0.75rem', color: '#fbbf24'}}></i>Productos Estrella</h2>
+                        <p>Los productos con mejor rendimiento y rentabilidad</p>
+                    </div>
+
+                    <div className="card">
+                        <div className="card-header">
+                            {starProducts.length} Productos Estrella Identificados
+                        </div>
+                        <div className="grid grid-4">
+                            {starProducts.map(product => (
+                                <div key={product.id} className="product-card-star">
+                                    <div style={{position: 'relative'}}>
+                                        <img src={product.image} alt={product.name} className="product-image" />
+                                        <div style={{position: 'absolute', top: '0.75rem', right: '0.75rem', background: '#fbbf24', color: 'white', padding: '0.375rem 0.75rem', borderRadius: '12px', fontWeight: '700', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.25rem'}}>
+                                            <i className="fas fa-star"></i>
+                                        </div>
+                                    </div>
+                                    <div className="product-body">
+                                        <div className="product-brand">{product.brand}</div>
+                                        <div className="product-name">{product.name}</div>
+                                        <div style={{fontSize: '0.7rem', color: '#9ca3af', fontFamily: 'monospace', marginBottom: '0.5rem'}}>
+                                            {product.sku}
+                                        </div>
+                                        
+                                        <div className="product-price">€{product.price.toFixed(2)}</div>
+                                        
+                                        <div style={{background: '#fffbeb', padding: '0.75rem', borderRadius: '8px', marginTop: '0.75rem', marginBottom: '0.75rem', border: '1px solid #fde68a'}}>
+                                            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.375rem', fontSize: '0.8rem'}}>
+                                                <span style={{color: '#92400e'}}>Revenue:</span>
+                                                <strong style={{color: '#92400e'}}>€{(product.revenue/1000).toFixed(1)}K</strong>
+                                            </div>
+                                            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.375rem', fontSize: '0.8rem'}}>
+                                                <span style={{color: '#92400e'}}>Unidades:</span>
+                                                <strong style={{color: '#92400e'}}>{product.unitsSold}</strong>
+                                            </div>
+                                            <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem'}}>
+                                                <span style={{color: '#92400e'}}>Margen:</span>
+                                                <strong style={{color: '#92400e'}}>{product.margin}%</strong>
+                                            </div>
+                                        </div>
+                                        
+                                        <a href={product.url} target="_blank" className="link-btn" style={{width: '100%', justifyContent: 'center'}}>
+                                            Ver en tienda <i className="fas fa-arrow-right" style={{marginLeft: '0.25rem'}}></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="card">
+                        <div className="card-header">¿Por qué son Productos Estrella?</div>
+                        <div className="grid grid-3">
+                            <div style={{background: '#f9fafb', padding: '1.25rem', borderRadius: '8px', borderLeft: '4px solid #3b82f6'}}>
+                                <div style={{fontSize: '1.75rem', marginBottom: '0.5rem', color: '#3b82f6'}}>
+                                    <i className="fas fa-dollar-sign"></i>
+                                </div>
+                                <h3 style={{fontSize: '1rem', marginBottom: '0.5rem', fontWeight: '600'}}>Alto Revenue</h3>
+                                <p style={{color: '#6b7280', fontSize: '0.875rem'}}>Generan el mayor porcentaje de ingresos totales</p>
+                            </div>
+                            <div style={{background: '#f9fafb', padding: '1.25rem', borderRadius: '8px', borderLeft: '4px solid #8b5cf6'}}>
+                                <div style={{fontSize: '1.75rem', marginBottom: '0.5rem', color: '#8b5cf6'}}>
+                                    <i className="fas fa-chart-line"></i>
+                                </div>
+                                <h3 style={{fontSize: '1rem', marginBottom: '0.5rem', fontWeight: '600'}}>Margen Óptimo</h3>
+                                <p style={{color: '#6b7280', fontSize: '0.875rem'}}>Margen superior al 35%, rentabilidad sostenible</p>
+                            </div>
+                            <div style={{background: '#f9fafb', padding: '1.25rem', borderRadius: '8px', borderLeft: '4px solid #10b981'}}>
+                                <div style={{fontSize: '1.75rem', marginBottom: '0.5rem', color: '#10b981'}}>
+                                    <i className="fas fa-sync-alt"></i>
+                                </div>
+                                <h3 style={{fontSize: '1rem', marginBottom: '0.5rem', fontWeight: '600'}}>Alta Rotación</h3>
+                                <p style={{color: '#6b7280', fontSize: '0.875rem'}}>Ventas consistentes y demanda estable</p>
+                            </div>
+                        </div>
+                    </div>
+                </>
+            );
+        };
+
+        // ========== COMPONENTE PRINCIPAL ==========
+
+        const Dashboard = () => {
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [categoryFilter, setCategoryFilter] = useState('all');
+            const [searchTerm, setSearchTerm] = useState('');
+
+            const filteredProducts = mockData.products.filter(p => {
+                const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter;
+                const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    p.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                    p.sku.toLowerCase().includes(searchTerm.toLowerCase());
+                return matchesCategory && matchesSearch;
+            });
+
+            const categories = [...new Set(mockData.products.map(p => p.category))];
+
+            return (
+                <div className="app-layout">
+                    {/* Sidebar */}
+                    <div className="sidebar">
+                        <div className="sidebar-header">
+                            <h1><i className="fas fa-chart-line" style={{marginRight: '0.5rem'}}></i>Retail Analytics</h1>
+                            <p>Dashboard profesional</p>
+                        </div>
+                        <div className="sidebar-nav">
+                            <div className="nav-section-title">Principal</div>
+                            <div 
+                                className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('dashboard')}
+                            >
+                                <span className="nav-icon"><i className="fas fa-chart-bar"></i></span>
+                                Dashboard
+                            </div>
+                            
+                            <div className="nav-separator"></div>
+                            
+                            <div className="nav-section-title">Gestión</div>
+                            <div 
+                                className={`nav-item ${activeTab === 'products' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('products')}
+                            >
+                                <span className="nav-icon"><i className="fas fa-box"></i></span>
+                                Productos
+                            </div>
+                            <div 
+                                className={`nav-item ${activeTab === 'inventory' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('inventory')}
+                            >
+                                <span className="nav-icon"><i className="fas fa-warehouse"></i></span>
+                                Inventario
+                            </div>
+                            
+                            <div className="nav-separator"></div>
+                            
+                            <div className="nav-section-title">Análisis</div>
+                            <div 
+                                className={`nav-item ${activeTab === 'predictions' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('predictions')}
+                            >
+                                <span className="nav-icon"><i className="fas fa-crystal-ball"></i></span>
+                                Predicciones
+                            </div>
+                            <div 
+                                className={`nav-item ${activeTab === 'stars' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('stars')}
+                            >
+                                <span className="nav-icon"><i className="fas fa-star"></i></span>
+                                Top Productos
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Main Content */}
+                    <div className="main-content">
+                        {activeTab === 'dashboard' && <DashboardTab data={mockData} />}
+                        {activeTab === 'products' && (
+                            <ProductsTab 
+                                data={mockData}
+                                categoryFilter={categoryFilter}
+                                setCategoryFilter={setCategoryFilter}
+                                searchTerm={searchTerm}
+                                setSearchTerm={setSearchTerm}
+                                filteredProducts={filteredProducts}
+                                categories={categories}
+                            />
+                        )}
+                        {activeTab === 'inventory' && <InventoryTab data={mockData} />}
+                        {activeTab === 'predictions' && <PredictionsTab data={mockData} />}
+                        {activeTab === 'stars' && <StarsTab data={mockData} />}
+                    </div>
+                </div>
+            );
+        };
+
+        // Renderizar
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Dashboard />);
+    </script>
+</body>
+</html>
